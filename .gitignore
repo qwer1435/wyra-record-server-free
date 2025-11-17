@@ -1,3 +1,5 @@
 node_modules
 .env
 logs
+tests/data
+ffmpeg.exe

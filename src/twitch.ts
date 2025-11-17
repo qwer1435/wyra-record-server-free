@@ -8,6 +8,7 @@ import { Variant as HlsStreamVariant } from "hls-parser/types";
 import Ffmpeg, { FfmpegCommand } from "fluent-ffmpeg";
 import { Mixin } from "ts-mixer";
 import Stream, { EventEmitter } from "stream";
+import path from "path";
 
 dotenv.config({ quiet: true })
 
@@ -159,12 +160,15 @@ export interface RecordEventMap {
 export class Record extends Mixin(EventEmitter<RecordEventMap>) {
   private _command: FfmpegCommand | null = null
   private _isRecording = false
+  private _stopSignal = "SIGINT"
   public get isRecording() {
     return this._isRecording
   }
   name: string
   target: string | Stream.Writable
   
+  constructor(name: string, directory: string)
+  constructor(name: string, stream: Stream.Writable)
   constructor(name: string, target: string | Stream.Writable) {
     super()
     this.name = name
@@ -172,9 +176,11 @@ export class Record extends Mixin(EventEmitter<RecordEventMap>) {
   }
 
   async start(): Promise<void> {
+    try {
     if (this._isRecording) {
       throw new Error
     }
+    this._isRecording = true
 
     const variants = await getHlsStreamVariants(this.name)
     if (!variants) {
@@ -187,33 +193,61 @@ export class Record extends Mixin(EventEmitter<RecordEventMap>) {
     const bestVariant = variants.toSorted((a, b) => (b.resolution?.height || 0) - (a.resolution?.height || 0))[0]
     const uri = bestVariant.uri
 
-    this._command = (
-      Ffmpeg()
-      .input(uri)
-      .on("start", () => {
-        this._isRecording = true
-        this.emit("start")
-      })
-      .on("progress", (progress) => {
-        this.emit("progress", progress)
-      })
-      .on("error", (error) => {
-        this.emit("error", error)
-      })
-      .on("end", () => {
-        this._command = null
-        this._isRecording = false
+    const command = Ffmpeg()
+    this._command = command
+
+    command
+    .on("start", () => {
+      this.emit("start")
+    })
+    .on("progress", (progress) => {
+      this.emit("progress", progress)
+    })
+    .on("error", (error) => {
+      this._command = null
+      this._isRecording = false
+      if (error.message.includes(this._stopSignal)) {
         this.emit("end")
-      })
-      .output(this.target)
-    )
+        return
+      }
+      this.emit("error", error)
+    })
+    .on("end", () => {
+      this._command = null
+      this._isRecording = false
+      this.emit("end")
+    })
     
-    this._command.run()
+    command
+    .input(uri)
+    .videoCodec("copy")
+    .audioCodec("copy")
+    if (typeof this.target === "string") {
+      command
+      .format("hls")
+      .outputOptions([
+        "-hls_list_size 0",
+        "-hls_time 10",
+        `-hls_segment_filename ${path.join(this.target, "%d.ts")}`,
+      ])
+      .output(path.join(this.target, "playlist.m3u8"))
+    } else {
+      command
+      .outputFormat("mpegts")
+      .output(this.target)
+    }
+    
+    command.run()
+    } catch(error) {
+      this._isRecording = false
+      throw error
+    }
   }
 
-  async stop() {
+  async stop(): Promise<void> {
     if (this._command && this._isRecording) {
-      this._command.kill("SIGINT")
+      this._command.kill(this._stopSignal)
+      return
     }
 
     throw new Error()

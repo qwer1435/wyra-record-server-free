@@ -10,13 +10,15 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "src/*": ["src/*"]
+      "src/*": ["src/*"],
+      "root/*": ["*"]
     },
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true
   },
   "exclude": [
     "node_modules",
-    "**/node_modules/*"
+    "**/node_modules/*",
+    "tests/data"
   ]
 }
