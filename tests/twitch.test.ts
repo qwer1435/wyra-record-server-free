@@ -86,10 +86,11 @@ describe("twitch", () => {
         let record = new Record(twitchOnlineStreamer, stream)
         
         const startEvent = new Promise<void>((res, rej) => {
+          const timeout = setTimeout(rej, startTimeout)
           record.once("start", () => {
+            clearTimeout(timeout)
             res()
           })
-          setTimeout(rej, startTimeout)
         })
         const start = record.start()
         await Promise.all([
@@ -98,17 +99,19 @@ describe("twitch", () => {
         ])
 
         const progressEvent = new Promise<void>(async(res, rej) => {
+          const timeout = setTimeout(rej, workTimeout)
           record.once("progress", () => {
+            clearTimeout(timeout)
             res()
           })
-          setTimeout(rej, workTimeout)
         })
         const errorEvent = new Promise<void>(async(res, rej) => {
+          const timeout = setTimeout(rej, workTimeout)
           record.once("error", (error) => {
+            clearTimeout(timeout)
             console.error(error)
             res()
           })
-          setTimeout(rej, workTimeout)
         })
         await Promise.all([
           expect(progressEvent).toResolve(),
@@ -116,10 +119,11 @@ describe("twitch", () => {
         ])
 
         const stopEvent = new Promise<void>((res, rej) => {
+          const timeout = setTimeout(rej, stopTimeout)
           record.once("end", () => {
+            clearTimeout(timeout)
             res()
           })
-          setTimeout(rej, stopTimeout)
         })
         const stop = record.stop()
         await Promise.all([
@@ -137,10 +141,11 @@ describe("twitch", () => {
         let record = new Record(twitchOnlineStreamer, directory)
         
         const startEvent = new Promise<void>((res, rej) => {
+          const timeout = setTimeout(rej, startTimeout)
           record.once("start", () => {
+            clearTimeout(timeout)
             res()
           })
-          setTimeout(rej, startTimeout)
         })
         const start = record.start()
         await Promise.all([
@@ -149,17 +154,19 @@ describe("twitch", () => {
         ])
 
         const progressEvent = new Promise<void>(async(res, rej) => {
+          const timeout = setTimeout(rej, workTimeout)
           record.once("progress", () => {
+            clearTimeout(timeout)
             res()
           })
-          setTimeout(rej, workTimeout)
         })
         const errorEvent = new Promise<void>(async(res, rej) => {
+          const timeout = setTimeout(rej, workTimeout)
           record.once("error", (error) => {
+            clearTimeout(timeout)
             console.error(error)
             res()
           })
-          setTimeout(rej, workTimeout)
         })
         await Promise.all([
           expect(progressEvent).toResolve(),
@@ -173,10 +180,11 @@ describe("twitch", () => {
         expect(hasSegments).toBeTrue()
 
         const stopEvent = new Promise<void>((res, rej) => {
+          const timeout = setTimeout(rej, stopTimeout)
           record.once("end", () => {
+            clearTimeout(timeout)
             res()
           })
-          setTimeout(rej, stopTimeout)
         })
         const stop = record.stop()
         await Promise.all([
